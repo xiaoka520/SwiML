@@ -1,9 +1,10 @@
+import CryptoKit
 import Foundation
 import SwiftUI
-import CryptoKit
 import UniformTypeIdentifiers
 
 // MARK: - 数据模型
+
 struct VersionManifestList: Decodable {
     let latest: LatestVersion
     let versions: [VersionEntry]
@@ -43,6 +44,7 @@ struct VersionManifest: Decodable {
 }
 
 // MARK: - 错误类型
+
 enum DownloadError: Error {
     case invalidURL
     case invalidResponse
@@ -54,30 +56,81 @@ enum DownloadError: Error {
     case invalidDirectory
 }
 
+// MARK: - 目录配置管理
+
+class DirectoryConfig: ObservableObject {
+    enum DirectoryOption: Int, CaseIterable {
+        case documents
+        case appBundle
+        case appParent
+        case custom
+    }
+    
+    @Published var selectedOption: DirectoryOption = .documents {
+        didSet {
+            saveConfig()
+        }
+    }
+    
+    @Published var customPath: String = "" {
+        didSet {
+            saveConfig()
+        }
+    }
+    
+    private let defaults = UserDefaults.standard
+    private let appBundleURL = Bundle.main.bundleURL
+    
+    init() {
+        loadConfig()
+    }
+    
+    var baseURL: URL {
+        switch selectedOption {
+        case .documents:
+            return FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
+                .appendingPathComponent(".minecraft")
+            
+        case .appBundle:
+            return appBundleURL
+                .appendingPathComponent("Minecraft")
+            
+        case .appParent:
+            return appBundleURL
+                .deletingLastPathComponent()
+                .appendingPathComponent(".minecraft")
+            
+        case .custom:
+            return URL(fileURLWithPath: customPath)
+        }
+    }
+    
+    private func loadConfig() {
+        selectedOption = DirectoryOption(
+            rawValue: defaults.integer(forKey: "directoryOption")) ?? .documents
+        customPath = defaults.string(forKey: "customPath") ?? ""
+    }
+    
+    private func saveConfig() {
+        defaults.set(selectedOption.rawValue, forKey: "directoryOption")
+        defaults.set(customPath, forKey: "customPath")
+    }
+}
+
 // MARK: - 下载服务
+
 actor LibraryDownloader {
     private let fileManager = FileManager.default
     private let session: URLSession
-    private let baseURL: URL
-    private let appDirectory = URL(fileURLWithPath: Bundle.main.bundlePath)
-    
-    init(baseURL: URL) throws {
-        // 验证路径是否有效
-        guard baseURL.isFileURL else {
-            throw DownloadError.invalidDirectory
+    let config: DirectoryConfig
+       
+    init(config: DirectoryConfig) {
+            let sessionConfig = URLSessionConfiguration.default
+            sessionConfig.timeoutIntervalForRequest = 30
+            self.session = URLSession(configuration: sessionConfig)
+            self.config = config
+            print("当前下载目录: \(config.baseURL.path)")
         }
-        
-        // 确保目录存在
-        try fileManager.createDirectory(
-            at: baseURL,
-            withIntermediateDirectories: true
-        )
-        
-        self.baseURL = baseURL
-        self.session = URLSession(configuration: .default)
-        
-        print("文件将保存到: \(baseURL.path)")
-    }
     
     func downloadVersion(version: String) async throws -> (total: Int, progress: AsyncStream<Int>) {
         let list = try await fetchVersionList()
@@ -91,6 +144,7 @@ actor LibraryDownloader {
     }
     
     // MARK: - 私有方法
+
     private func fetchVersionList() async throws -> VersionManifestList {
         let url = URL(string: "https://bmclapi2.bangbang93.com/mc/game/version_manifest_v2.json")!
         let (data, _) = try await session.data(from: url)
@@ -145,9 +199,9 @@ actor LibraryDownloader {
     }
     
     private func processLibrary(index: Int, artifact: VersionManifest.Library.Downloads.Artifact) async throws {
-        let fileURL = baseURL
-            .appendingPathComponent("libraries")
-            .appendingPathComponent(artifact.path)
+            let fileURL = config.baseURL  // 使用 config 中的 baseURL
+                .appendingPathComponent("libraries")
+                .appendingPathComponent(artifact.path)
         
         if try shouldSkipDownload(fileURL: fileURL, expectedSize: artifact.size) {
             print("[\(index)] 已存在: \(fileURL.lastPathComponent)")
@@ -220,7 +274,7 @@ actor LibraryDownloader {
     }
 }
 
-// MARK: - 视图模型
+// MARK: - 视图模型（修复初始化逻辑）
 @MainActor
 final class DownloadManager: ObservableObject {
     @Published var isDownloading = false
@@ -228,20 +282,21 @@ final class DownloadManager: ObservableObject {
     @Published var totalCount = 0
     @Published var error: Error?
     
-    private var downloader: LibraryDownloader?
+    private let directoryConfig = DirectoryConfig()  // 统一配置管理
+    private var downloader: LibraryDownloader!
     
-    func startDownload(version: String, baseURL: URL) async {
+    func startDownload(version: String) async {
         isDownloading = true
         error = nil
         completedCount = 0
         totalCount = 0
         
         do {
-            // 初始化下载器
-            downloader = try LibraryDownloader(baseURL: baseURL)
+            // 每次创建新的下载器以获取最新配置
+            downloader = LibraryDownloader(config: directoryConfig)
             
             // 开始下载
-            let (total, progressStream) = try await downloader!.downloadVersion(version: version)
+            let (total, progressStream) = try await downloader.downloadVersion(version: version)
             totalCount = total
             
             for await progress in progressStream {
@@ -254,6 +309,3 @@ final class DownloadManager: ObservableObject {
         isDownloading = false
     }
 }
-
-
-

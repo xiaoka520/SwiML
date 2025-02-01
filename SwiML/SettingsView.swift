@@ -1,5 +1,8 @@
 import SwiftUI
 
+
+
+
 struct SettingsView: View {
     var body: some View {
         ZStack{
@@ -11,8 +14,12 @@ struct SettingsView: View {
             }
         }
         .navigationTitle("设置")
+        
     }
 }
+        
+    
+
 
 #Preview {
     SettingsView()
