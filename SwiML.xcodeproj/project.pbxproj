@@ -6,6 +6,12 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		9CAC429B2D4EFA1900BC3410 /* Zip in Frameworks */ = {isa = PBXBuildFile; productRef = 9CAC429A2D4EFA1900BC3410 /* Zip */; };
+		9CAC429D2D4EFA2B00BC3410 /* Zip in Frameworks */ = {isa = PBXBuildFile; productRef = 9CAC429C2D4EFA2B00BC3410 /* Zip */; };
+		9CAC42A02D4F067A00BC3410 /* ZIPFoundation in Frameworks */ = {isa = PBXBuildFile; productRef = 9CAC429F2D4F067A00BC3410 /* ZIPFoundation */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXFileReference section */
 		9AC7669E2D43668B00E10217 /* SwiML.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SwiML.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
@@ -36,6 +42,9 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				9CAC429D2D4EFA2B00BC3410 /* Zip in Frameworks */,
+				9CAC429B2D4EFA1900BC3410 /* Zip in Frameworks */,
+				9CAC42A02D4F067A00BC3410 /* ZIPFoundation in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -78,6 +87,9 @@
 			);
 			name = SwiML;
 			packageProductDependencies = (
+				9CAC429A2D4EFA1900BC3410 /* Zip */,
+				9CAC429C2D4EFA2B00BC3410 /* Zip */,
+				9CAC429F2D4F067A00BC3410 /* ZIPFoundation */,
 			);
 			productName = SwiML;
 			productReference = 9AC7669E2D43668B00E10217 /* SwiML.app */;
@@ -107,6 +119,10 @@
 			);
 			mainGroup = 9AC766952D43668B00E10217;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				9CAC42992D4EFA1900BC3410 /* XCLocalSwiftPackageReference "../../Downloads/Zip-2.1.2" */,
+				9CAC429E2D4F067A00BC3410 /* XCLocalSwiftPackageReference "../../Downloads/ZIPFoundation-0.9.19" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 9AC7669F2D43668B00E10217 /* Products */;
 			projectDirPath = "";
@@ -351,6 +367,32 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		9CAC42992D4EFA1900BC3410 /* XCLocalSwiftPackageReference "../../Downloads/Zip-2.1.2" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = "../../Downloads/Zip-2.1.2";
+		};
+		9CAC429E2D4F067A00BC3410 /* XCLocalSwiftPackageReference "../../Downloads/ZIPFoundation-0.9.19" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = "../../Downloads/ZIPFoundation-0.9.19";
+		};
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		9CAC429A2D4EFA1900BC3410 /* Zip */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = Zip;
+		};
+		9CAC429C2D4EFA2B00BC3410 /* Zip */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = Zip;
+		};
+		9CAC429F2D4F067A00BC3410 /* ZIPFoundation */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = ZIPFoundation;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 9AC766962D43668B00E10217 /* Project object */;
 }

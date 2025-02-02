@@ -2,9 +2,9 @@ import CryptoKit
 import Foundation
 import SwiftUI
 import UniformTypeIdentifiers
+import ZIPFoundation
 
 // MARK: - 数据模型
-
 struct VersionManifestList: Decodable {
     let latest: LatestVersion
     let versions: [VersionEntry]
@@ -23,12 +23,15 @@ struct VersionManifestList: Decodable {
     }
 }
 
+// MARK: - VersionManifest 结构
 struct VersionManifest: Decodable {
     let libraries: [Library]
     
     struct Library: Decodable {
         let downloads: Downloads
         let name: String
+        let rules: [Rule]?
+        let classifiers: [String: Downloads.Artifact]?
         
         struct Downloads: Decodable {
             let artifact: Artifact?
@@ -40,11 +43,18 @@ struct VersionManifest: Decodable {
                 let url: String
             }
         }
+        
+        struct Rule: Decodable {
+            let os: OS?
+            
+            struct OS: Decodable {
+                let name: String
+            }
+        }
     }
 }
 
-// MARK: - 错误类型
-
+// MARK: - 统一的错误类型
 enum DownloadError: Error {
     case invalidURL
     case invalidResponse
@@ -54,6 +64,8 @@ enum DownloadError: Error {
     case versionNotFound
     case invalidManifest
     case invalidDirectory
+    case missingArtifact
+    case invalidArchive
 }
 
 // MARK: - 目录配置管理
@@ -93,7 +105,7 @@ class DirectoryConfig: ObservableObject {
             
         case .appBundle:
             return appBundleURL
-                .appendingPathComponent("Minecraft")
+                .appendingPathComponent("minecraft")
             
         case .appParent:
             return appBundleURL
@@ -274,7 +286,7 @@ actor LibraryDownloader {
     }
 }
 
-// MARK: - 视图模型（修复初始化逻辑）
+// MARK: - 视图模型
 @MainActor
 final class DownloadManager: ObservableObject {
     @Published var isDownloading = false
@@ -309,3 +321,4 @@ final class DownloadManager: ObservableObject {
         isDownloading = false
     }
 }
+
