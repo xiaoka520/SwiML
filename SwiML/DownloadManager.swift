@@ -1,3 +1,4 @@
+import AsyncAlgorithms
 import CryptoKit
 import Foundation
 import SwiftUI
@@ -18,8 +19,8 @@ struct VersionManifestList: Decodable {
         let id: String
         let type: String
         let url: String
-        let time: Date
-        let releaseTime: Date
+        let time: String  // Mojang API 实际返回的是字符串日期
+        let releaseTime: String
     }
 }
 
@@ -231,28 +232,29 @@ actor LibraryDownloader {
         return path
     }
 
-    private func extractNativeFiles(from zipURL: URL, to destination: URL) async throws {
+    private func extractNativeFiles(from zipURL: URL, to destination: URL)
+        async throws
+    {
         // 使用新的抛出错误的初始化方法
         let archive = try Archive(url: zipURL, accessMode: .read)
-        
+
         for entry in archive {
             // 检查文件扩展名
-            guard entry.path.hasSuffix(".dylib") || entry.path.hasSuffix(".jnilib") else { continue }
-            
+            guard
+                entry.path.hasSuffix(".dylib")
+                    || entry.path.hasSuffix(".jnilib")
+            else { continue }
+
             // 解析文件名
             let fileName = URL(fileURLWithPath: entry.path).lastPathComponent
             let targetURL = destination.appendingPathComponent(fileName)
-            
+
             // 解压文件并处理返回的Result
-            _ = try? archive.extract(entry, to: targetURL) // 直接忽略返回值
-            
+            _ = try? archive.extract(entry, to: targetURL)  // 直接忽略返回值
+
             print("解压成功: \(fileName)")
         }
     }
-
-
-
-
 
     private func createDirectoryIfNeeded(at url: URL) async throws {
         try await withCheckedThrowingContinuation { continuation in
@@ -422,46 +424,110 @@ actor LibraryDownloader {
 // MARK: - 视图模型
 @MainActor
 final class DownloadManager: ObservableObject {
+    // 原有属性
     @Published var isDownloading = false
     @Published var completedCount = 0
     @Published var totalCount = 0
     @Published var error: Error?
     @Published var isProcessingNatives = false
 
+    // 新增资源下载状态
+    @Published var assetCompleted = 0
+    @Published var assetTotal = 0
+    @Published var isDownloadingAssets = false
+
     private let directoryConfig = DirectoryConfig()
-    private var downloader: LibraryDownloader!
+    private var libraryDownloader: LibraryDownloader!
+    private var assetDownloader: AssetDownloader!
+
+    private func handleError(_ error: Error) {
+        self.error = error
+        isDownloading = false
+        isProcessingNatives = false
+        isDownloadingAssets = false
+
+        // 重置进度（可选）
+        resetProgress()
+    }
 
     func startDownload(version: String) async {
         isDownloading = true
         error = nil
-        completedCount = 0
-        totalCount = 0
+        resetProgress()
 
         do {
-            downloader = LibraryDownloader(config: directoryConfig)
+            // 初始化下载器
+            libraryDownloader = LibraryDownloader(config: directoryConfig)
+            assetDownloader = AssetDownloader(config: directoryConfig)
 
-            // 下载主库
+            // 第一阶段：下载主库
             let (total, manifest, progressStream) =
-                try await downloader.downloadVersion(version: version)
+                try await libraryDownloader.downloadVersion(version: version)
             totalCount = total
+            await processLibraryProgress(stream: progressStream)
 
-            // 监听下载进度，确保completedCount按文件数增加
-            for await _ in progressStream {
-                completedCount += 1 // 每下载一个文件就增加 1
-            }
+            // 第二阶段：处理原生库
+            try await processNativeLibraries(version: version, manifest: manifest)
 
-            // 处理 Native 库
-            isProcessingNatives = true
-            try await downloader.processNativeLibraries(
-                for: version, manifest: manifest)
-            isProcessingNatives = false
+            // 第三阶段：下载资源
+            try await downloadAssets(version: version)
 
         } catch {
-            self.error = error
-            isDownloading = false
-            isProcessingNatives = false
+            handleError(error)
         }
 
         isDownloading = false
+    }
+
+    private func resetProgress() {
+        completedCount = 0
+        totalCount = 0
+        assetCompleted = 0
+        assetTotal = 0
+    }
+
+    private func processLibraryProgress(stream: AsyncStream<Int>) async {
+        // 遍历进度流，每次更新 completedCount 增加 1
+        for await count in stream {
+            completedCount += 1
+        }
+    }
+
+    private func processNativeLibraries(version: String, manifest: VersionManifest) async throws {
+        isProcessingNatives = true
+        try await libraryDownloader.processNativeLibraries(for: version, manifest: manifest)
+        isProcessingNatives = false
+    }
+
+    // 修改 downloadAssets 方法
+    private func downloadAssets(version: String) async throws {
+        isDownloadingAssets = true
+        assetCompleted = 0
+        
+        // 获取资源列表
+        let assets = try await assetDownloader.prepareAssetList(version: version)
+        assetTotal = assets.count
+        
+        // 使用串行队列保证计数顺序
+        let serialQueue = DispatchQueue(label: "download.queue")
+        
+        try await withThrowingTaskGroup(of: Void.self) { group in
+            for asset in assets {
+                group.addTask {
+                    try await self.assetDownloader.downloadSingleAsset(asset)
+                    
+                    // 原子操作更新计数器，每下载一个资产，assetCompleted 增加 1
+                    serialQueue.sync {
+                        DispatchQueue.main.async {
+                            self.assetCompleted += 1
+                        }
+                    }
+                }
+            }
+            
+            try await group.waitForAll()
+        }
+        
+        isDownloadingAssets = false
     }
 }

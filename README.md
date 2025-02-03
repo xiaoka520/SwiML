@@ -1,2 +1,2 @@
 # SwiML
-A Minecraft Laucher powered by Swift and SwiftUI
+A Minecraft Launcher powered by Swift and SwiftUI

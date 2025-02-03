@@ -10,6 +10,7 @@
 		9CAC429B2D4EFA1900BC3410 /* Zip in Frameworks */ = {isa = PBXBuildFile; productRef = 9CAC429A2D4EFA1900BC3410 /* Zip */; };
 		9CAC429D2D4EFA2B00BC3410 /* Zip in Frameworks */ = {isa = PBXBuildFile; productRef = 9CAC429C2D4EFA2B00BC3410 /* Zip */; };
 		9CAC42A02D4F067A00BC3410 /* ZIPFoundation in Frameworks */ = {isa = PBXBuildFile; productRef = 9CAC429F2D4F067A00BC3410 /* ZIPFoundation */; };
+		9CAC42F52D4FD26500BC3410 /* AsyncAlgorithms in Frameworks */ = {isa = PBXBuildFile; productRef = 9CAC42F42D4FD26500BC3410 /* AsyncAlgorithms */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -45,6 +46,7 @@
 				9CAC429D2D4EFA2B00BC3410 /* Zip in Frameworks */,
 				9CAC429B2D4EFA1900BC3410 /* Zip in Frameworks */,
 				9CAC42A02D4F067A00BC3410 /* ZIPFoundation in Frameworks */,
+				9CAC42F52D4FD26500BC3410 /* AsyncAlgorithms in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -90,6 +92,7 @@
 				9CAC429A2D4EFA1900BC3410 /* Zip */,
 				9CAC429C2D4EFA2B00BC3410 /* Zip */,
 				9CAC429F2D4F067A00BC3410 /* ZIPFoundation */,
+				9CAC42F42D4FD26500BC3410 /* AsyncAlgorithms */,
 			);
 			productName = SwiML;
 			productReference = 9AC7669E2D43668B00E10217 /* SwiML.app */;
@@ -122,6 +125,7 @@
 			packageReferences = (
 				9CAC42992D4EFA1900BC3410 /* XCLocalSwiftPackageReference "../../Downloads/Zip-2.1.2" */,
 				9CAC429E2D4F067A00BC3410 /* XCLocalSwiftPackageReference "../../Downloads/ZIPFoundation-0.9.19" */,
+				9CAC42F32D4FD26500BC3410 /* XCRemoteSwiftPackageReference "swift-async-algorithms" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 9AC7669F2D43668B00E10217 /* Products */;
@@ -379,6 +383,17 @@
 		};
 /* End XCLocalSwiftPackageReference section */
 
+/* Begin XCRemoteSwiftPackageReference section */
+		9CAC42F32D4FD26500BC3410 /* XCRemoteSwiftPackageReference "swift-async-algorithms" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/apple/swift-async-algorithms.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 1.0.3;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
 /* Begin XCSwiftPackageProductDependency section */
 		9CAC429A2D4EFA1900BC3410 /* Zip */ = {
 			isa = XCSwiftPackageProductDependency;
@@ -391,6 +406,11 @@
 		9CAC429F2D4F067A00BC3410 /* ZIPFoundation */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = ZIPFoundation;
+		};
+		9CAC42F42D4FD26500BC3410 /* AsyncAlgorithms */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 9CAC42F32D4FD26500BC3410 /* XCRemoteSwiftPackageReference "swift-async-algorithms" */;
+			productName = AsyncAlgorithms;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};
