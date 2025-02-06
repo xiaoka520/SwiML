@@ -60,7 +60,7 @@ actor AssetDownloader {
         let (data, _) = try await session.data(from: url)
         
         // 添加调试输出验证数据结构
-        print(String(data: data, encoding: .utf8) ?? "Invalid JSON")
+        //print(String(data: data, encoding: .utf8) ?? "Invalid JSON")
         
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601
@@ -69,18 +69,21 @@ actor AssetDownloader {
     
     private func downloadAssetIndex(
         version: String,
-        manifest: VersionManifestList, // 使用正确的清单类型
+        manifest: VersionManifestList,
         saveTo directory: URL
     ) async throws -> URL {
         guard let versionEntry = manifest.versions.first(where: { $0.id == version }) else {
             throw DownloadError.versionNotFound
         }
         
-        guard var urlComponents = URLComponents(string: versionEntry.url) else {
-            throw DownloadError.invalidURL
-        }
-        urlComponents.host = "bmclapi2.bangbang93.com"
-        guard let indexURL = urlComponents.url else {
+        // 直接替换 URL 中的域名（更可靠的方式）
+        let mirrorURLString = versionEntry.url
+            .replacingOccurrences(
+                of: "piston-meta.mojang.com",
+                with: "bmclapi2.bangbang93.com"
+            )
+        
+        guard let indexURL = URL(string: mirrorURLString) else {
             throw DownloadError.invalidURL
         }
         
@@ -101,12 +104,14 @@ actor AssetDownloader {
             let prefix = String(object.hash.prefix(2))
             let fileName = object.hash
             
-            // 构造下载 URL
+            // 构造下载 URL（使用镜像源）
             let downloadURL = URL(string: "https://bmclapi2.bangbang93.com/assets/\(prefix)/\(fileName)")!
             
-            // 构造存储路径
+            // 构造存储路径（分步拼接路径组件）
             let savePath = config.baseURL
-                .appendingPathComponent("assets/objects/\(prefix)")
+                .appendingPathComponent("assets")
+                .appendingPathComponent("objects")
+                .appendingPathComponent(prefix)
                 .appendingPathComponent(fileName)
             
             return (downloadURL, savePath)
@@ -148,17 +153,16 @@ actor AssetDownloader {
     }
     
     private func createDirectory(at url: URL) async throws {
-        try await withCheckedThrowingContinuation { continuation in
-            do {
-                try FileManager.default.createDirectory(
-                    at: url,
-                    withIntermediateDirectories: true
-                )
-                continuation.resume()
-            } catch {
-                continuation.resume(throwing: error)
-            }
+        // 检查父目录是否可写
+        let parentDir = url.deletingLastPathComponent()
+        guard FileManager.default.isWritableFile(atPath: parentDir.path) else {
+            throw DownloadError.filePermissionDenied(path: parentDir.path)
         }
+        
+        try FileManager.default.createDirectory(
+            at: url,
+            withIntermediateDirectories: true
+        )
     }
 }
 
@@ -192,7 +196,8 @@ final class AssetViewModel: ObservableObject {
 extension AssetDownloader {
     // 准备资源列表
     func prepareAssetList(version: String) async throws -> [(URL, URL)] {
-        let (indexURL, objectsDir) = try await prepareEnvironment(version: version)
+        let (indexURL, _) = try await prepareEnvironment(version: version)
+//        let (indexURL, objectsDir) = try await prepareEnvironment(version: version)
         return try await parseAssetIndex(from: indexURL)
     }
     
@@ -210,6 +215,11 @@ extension AssetDownloader {
         // 确保目录存在
         let directory = savePath.deletingLastPathComponent()
         try await createDirectory(at: directory)
+        
+        // 验证目标路径可写
+            guard FileManager.default.isWritableFile(atPath: savePath.deletingLastPathComponent().path) else {
+                throw DownloadError.filePermissionDenied(path: savePath.path)
+            }
         
         // 增加文件存在性检查
         if FileManager.default.fileExists(atPath: savePath.path) {
